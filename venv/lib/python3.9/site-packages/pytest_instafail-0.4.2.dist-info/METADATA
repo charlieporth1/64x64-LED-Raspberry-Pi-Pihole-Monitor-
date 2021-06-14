@@ -1,0 +1,69 @@
+Metadata-Version: 2.1
+Name: pytest-instafail
+Version: 0.4.2
+Summary: pytest plugin to show failures instantly
+Home-page: https://github.com/pytest-dev/pytest-instafail
+Author: Janne Vanhala
+Author-email: janne.vanhala@gmail.com
+License: BSD
+Platform: any
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Topic :: Software Development :: Testing
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: Utilities
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Requires-Python: >=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*
+Requires-Dist: pytest (>=2.9)
+
+pytest-instafail
+================
+
+|build status|_
+
+.. |build status| image:: https://travis-ci.org/pytest-dev/pytest-instafail.svg?branch=master
+   :alt: Build Status
+.. _build status: https://travis-ci.org/pytest-dev/pytest-instafail
+
+pytest-instafail is a plugin for `pytest <https://pytest.org>`_ that shows
+failures and errors instantly instead of waiting until the end of test session.
+
+Requirements
+------------
+
+You will need the following prerequisites in order to use pytest-instafail:
+
+- Python 2.7, 3.5+ or PyPy
+- pytest 2.9 or newer
+
+Installation
+------------
+
+To install pytest-instafail::
+
+    $ pip install pytest-instafail
+
+Then run your tests with::
+
+    $ pytest --instafail
+
+Resources
+---------
+
+- `Issue Tracker <https://github.com/pytest-dev/pytest-instafail/issues>`_
+- `Code <https://github.com/pytest-dev/pytest-instafail/>`_
+- `Development Version
+  <https://github.com/pytest-dev/pytest-instafail/zipball/master#egg=pytest-instafail-dev>`_
+
+

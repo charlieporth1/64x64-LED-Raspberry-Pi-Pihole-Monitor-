@@ -1,0 +1,3 @@
+[pytest11]
+instafail = pytest_instafail
+

@@ -1,0 +1,14 @@
+main:
+  hosts:
+    - pi.hole:
+        hostname: 'pi.hole'
+        password: 'raspberry'
+        username: 'pi'
+    - example.dev:
+        hostname: 'example.dev'
+        private_key: '~/.ssh/private_key.pem'
+        username: 'pi'
+    - example.com:
+        hostname: 'example.com'
+        private_key: '~/.ssh/example_com_private_key'
+        username: 'pi'

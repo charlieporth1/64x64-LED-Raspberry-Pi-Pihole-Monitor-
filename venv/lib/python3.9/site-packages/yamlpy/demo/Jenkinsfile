@@ -1,0 +1,76 @@
+#!groovy
+
+pipeline {
+
+    agent {
+        docker { image 'registry.cn-hangzhou.aliyuncs.com/yangjianliang/yamlapi:0.0.8' }
+    }
+
+    parameters {
+        choice(
+            name:'measured_environment',
+            choices: ['test', 'pre', 'formal', 'dev'],
+            description: '被测环境')
+    }
+
+    environment {
+        mail_to='123456789@qq.com'
+    }
+
+    options {
+        buildDiscarder(
+            logRotator(daysToKeepStr: '7', numToKeepStr: '10', artifactDaysToKeepStr: '7', artifactNumToKeepStr: '10'))
+    }
+
+    triggers {
+		cron('H 2 * * 1-5')
+    }
+
+    stages {
+        stage('Prepare'){
+            steps {
+                script{
+                    echo "被测环境：${params.measured_environment}"
+                }
+            }
+        }
+        stage('Test') {
+            steps {
+                script{
+                    sh "pytest --cmd="
+                    }
+                }
+            }
+        }
+
+    post {
+        always {
+            junit 'report_log/*.xml'
+			publishHTML (
+                target: [
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: false,
+                    keepAll: true,
+                    reportDir: 'report_log',
+                    reportFiles: 'report.html',
+                    reportName: "XXX接口测试报告"
+                    ])
+            allure([
+                disabled: false,
+                includeProperties: false,
+                jdk: '',
+                properties: [],
+                reportBuildPolicy: 'ALWAYS',
+                results: [[path: 'report_log/allure-report']]
+                ])
+            step([
+                $class: 'Mailer',
+                recipients: "${mail_to}",
+                notifyEveryUnstableBuild: true,
+                sendToIndividuals: true
+                ])
+            deleteDir()
+        }
+    }
+
+}
