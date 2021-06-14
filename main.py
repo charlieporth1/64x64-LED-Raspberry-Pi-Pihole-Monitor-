@@ -27,7 +27,6 @@ default_font = repo_dir + "/fonts/10x20.bdf"
 led_default_options = '--led-cols=64 --led-rows=64 --led-gpio-mapping=adafruit-hat-pwm  --led-pwm-lsb-nanoseconds=100 --led-daemon --led-brightness=100 --led-slowdown-gpio=4'
 scroll_speed = 3
 
-
 default_port = 80
 default_scheme = 'http'
 default_ssh_port = 22
@@ -45,7 +44,7 @@ yaml_file = read_config_file()
 
 
 def get_shell_path(path='~/'):
-    stdout,_ = bash_run("ls {0}".format(path))
+    stdout, _ = bash_run("ls {0}".format(path))
     return stdout
 
 
@@ -74,7 +73,7 @@ def bash_run(command):
 
 
 def print_is_running():
-    stdout,_ = bash_run("ps -aux | grep \"" + print_bin + "\" | grep -v grep | awk '{print $2}' | wc -l")
+    stdout, _ = bash_run("ps -aux | grep \"" + print_bin + "\" | grep -v grep | awk '{print $2}' | wc -l")
     process_count = int(stdout)
     return process_count > 0
 
@@ -93,16 +92,17 @@ async def pihole_api(hostname=default_hostname, port=default_port, http_scheme=d
     url = "{0}://{1}:{2}/admin/api.php?summaryRaw".format(http_scheme, hostname, port)
     r = requests.get(url)
     pihole_api_json = json.loads(r.text)
-    ads_blocked_today = pihole_api_json['ads_blocked_today']
-    ads_percentage_today = str(round(pihole_api_json["ads_percentage_today"])) + "%"
-    clients_ever_seen = str(pihole_api_json["clients_ever_seen"])
-    dns_queries_today = pihole_api_json['dns_queries_today']
+    if pihole_api_json is not None or pihole_api_json is not '':
+        ads_blocked_today = pihole_api_json['ads_blocked_today']
+        ads_percentage_today = str(round(pihole_api_json["ads_percentage_today"])) + "%"
+        clients_ever_seen = str(pihole_api_json["clients_ever_seen"])
+        dns_queries_today = pihole_api_json['dns_queries_today']
 
-    await print_status("Host: {0}".format(hostname))
-    await print_status("Ads Blocked {0}".format(ads_blocked_today), 0, 20)
-    await print_status("Ads Blocked Percentage {0}".format(ads_percentage_today), 0, 40)
-    await print_status("Number of Clients {0}".format(clients_ever_seen))
-    await print_status("Total DNS Queries {0}".format(dns_queries_today), 0, 20)
+        await print_status("Host: {0}".format(hostname))
+        await print_status("Ads Blocked {0}".format(ads_blocked_today), 0, 20)
+        await print_status("Ads Blocked Percentage {0}".format(ads_percentage_today), 0, 40)
+        await print_status("Number of Clients {0}".format(clients_ever_seen))
+        await print_status("Total DNS Queries {0}".format(dns_queries_today), 0, 20)
 
 
 def systemd_status_remote_alert(hostname=default_hostname, usrname=default_user, passwd_or_private_key='raspberry',
@@ -190,13 +190,13 @@ async def main():
             current_host = host[list(host)[0]]
             current_hostname = current_host['hostname']
             try:
-                t2 = threading.Thread(target=run_alert, args=(current_host,current_hostname,))
+                t2 = threading.Thread(target=run_alert, args=(current_host, current_hostname,))
                 t2.start()
             except:
                 print("Thread error")
 
-            await pihole_api(current_hostname, 8443, 'https')
             await run_api(current_host, current_hostname)
+
 
 if not is_led_interface_installed():
     install_led_interface()
