@@ -24,8 +24,13 @@ def random_color():
 default_font = repo_dir + "/fonts/10x20.bdf"
 led_default_options = '--led-cols=64 --led-rows=64 --led-gpio-mapping=adafruit-hat-pwm  --led-pwm-lsb-nanoseconds=100 --led-daemon --led-brightness=100 --led-slowdown-gpio=4'
 scroll_speed = 3
-default_port = 8443
-default_scheme = 'https'
+
+
+default_port = 80
+default_scheme = 'http'
+default_ssh_port = 22
+default_hostname = 'pi.hole'
+default_user = 'pi'
 
 
 def read_config_file():
@@ -74,7 +79,7 @@ async def print_status(args='', x=0, y=0, color=None):
             break
 
 
-async def pihole_api(hostname='pi.hole', port=80, http_scheme='http'):
+async def pihole_api(hostname=default_hostname, port=default_port, http_scheme=default_scheme):
     url = "{0}://{1}:{2}/admin/api.php?summaryRaw".format(http_scheme, hostname, port)
     r = requests.get(url)
     pihole_api_json = json.loads(r.text)
@@ -90,7 +95,7 @@ async def pihole_api(hostname='pi.hole', port=80, http_scheme='http'):
     await print_status("Total DNS Queries {0}".format(dns_queries_today), 0, 20)
 
 
-def systemd_status_remote_alert(hostname='pi.hole', usrname='pi', passwd_or_private_key='raspberry',
+def systemd_status_remote_alert(hostname=default_hostname, usrname=default_user, passwd_or_private_key='raspberry',
                                 service='pihole-FTL.service', is_passwd=True):
     ssh = paramiko.SSHClient()
     ssh.load_system_host_keys()
@@ -131,54 +136,45 @@ async def main():
     hosts = yaml_file['hosts']
 
     async def run_api(hostname):
-        async def run():
-            await pihole_api(hostname, default_port, default_scheme)
-            time.sleep(1.0)
+        await pihole_api(hostname, default_port, default_scheme)
+        time.sleep(1.0)
 
-        # asyncio.run(run())
-        await run()
-
-    def run_alert(current_host, current_hostname):
-        if current_hostname == 'home.ctptech.dev':
-            current_hostname = 'ubuntu-server.local'
+    def run_alert(host_data, hostname):
         async def run():
+            host_data_username = current_host['username']
+            try:
+                host_data_hostname = host_data['override_hostname']
+            except:
+                host_data_hostname = hostname
 
             try:
-                current_host_password = current_host['password']
+                host_data_password_or_private_key = host_data['password']
                 is_password = True
             except:
-                current_host_password = current_host['private_key']
+                host_data_password_or_private_key = host_data['private_key']
                 is_password = False
 
-            current_host_username = current_host['username']
             for service in services:
-                alert_result = systemd_status_remote_alert(current_hostname, current_host_username,
-                                                           current_host_password, service, is_password)
+                alert_result = systemd_status_remote_alert(host_data_hostname, host_data_username,
+                                                           host_data_password_or_private_key, service, is_password)
                 if alert_result is not None:
                     exit_scroll()
+                    await asyncio.sleep(2)
                     await print_status(alert_result)
 
         asyncio.run(run())
 
     while True:
         for host in hosts:
-        # current_host = hosts[1]['aws.ctptech.dev']
             current_host = host[list(host)[0]]
             current_hostname = current_host['hostname']
-        # t1 = threading.Thread(target=run_api, args=(current_hostname,))
+
             t2 = threading.Thread(target=run_alert, args=(current_host,current_hostname,))
-        # starting thread 1
-        # t1.start()
-        # starting thread 2
             t2.start()
             await run_api(current_hostname)
 
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
-
 if not is_led_interface_installed():
-    print("is_led_interface_installed", is_led_interface_installed())
     install_led_interface()
 
 asyncio.run(main())
-# main()

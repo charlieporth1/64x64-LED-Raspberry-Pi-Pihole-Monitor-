@@ -1,6 +1,6 @@
 # 64x64 LED Raspberry Pi Pi-Hole Monitor
 ## Project overview
-This project using the Adafruit 64x64 LED panel to monitor my PiHole setup remotely and can be run locally
+This project uses Adafruit's 64x64 LED panel to monitor my PiHole setup remotely or locally (Internet or Intranet) and can be run locally
 You can purchase a Adafruit 64x64 LED panel [here](https://www.adafruit.com/product/3649)
 This project was built and tested with Python3.7 
 This project installs [this library](https://github.com/hzeller/rpi-rgb-led-matrix/) in order to print on the display
@@ -8,6 +8,7 @@ This project installs [this library](https://github.com/hzeller/rpi-rgb-led-matr
 
 ## Project functions 
 * Status monitor 
+* Stat monitor 
 * Systemd process failure alert 
 
  
@@ -22,7 +23,6 @@ pip install -r requirements.txt
 
 # Running
 ```
-
 source venv/bin/activate 
 sudo python3 main.py
 ```

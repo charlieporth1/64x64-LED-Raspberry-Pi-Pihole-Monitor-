@@ -3,6 +3,7 @@ main:
     - pi.hole:
         hostname: 'pi.hole'
         password: 'raspberry'
+        override_hostname: 'raspberrypi.local'
         username: 'pi'
     - example.dev:
         hostname: 'example.dev'
@@ -12,3 +13,6 @@ main:
         hostname: 'example.com'
         private_key: '~/.ssh/example_com_private_key'
         username: 'pi'
+        http_scheme: 'https'
+        http_port: '8443'
+        ssh_port: '22'
