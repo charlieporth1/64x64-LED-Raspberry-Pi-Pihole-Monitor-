@@ -14,5 +14,5 @@ main:
         private_key: '~/.ssh/example_com_private_key'
         username: 'pi'
         http_scheme: 'https'
-        http_port: '8443'
-        ssh_port: '22'
+        http_port: 8443
+        ssh_port: 22

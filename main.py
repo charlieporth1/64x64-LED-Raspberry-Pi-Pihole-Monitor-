@@ -7,9 +7,11 @@ import time
 import random
 import asyncio
 import threading
+from subprocess import PIPE, run
 
 repo = 'rpi-rgb-led-matrix'
-repo_dir = '/root/' + repo
+install_dir = '/opt/'
+repo_dir = install_dir + repo
 led_api_git_url = 'https://github.com/hzeller/' + repo
 print_bin = 'scrolling-text-example'
 
@@ -42,6 +44,11 @@ def read_config_file():
 yaml_file = read_config_file()
 
 
+def get_shell_path(path='~/'):
+    stdout,_ = bash_run("ls {0}".format(path))
+    return stdout
+
+
 def exit_scroll():
     # ps -aux | grep "scrolling-text-example" | grep -v grep | awk '{print $2}' | xargs sudo kill -9
     os.system("ps -aux | grep \"" + print_bin + "\" | grep -v grep | awk '{print $2}' | xargs sudo kill -9 ")
@@ -53,13 +60,22 @@ exit_scroll()
 def install_led_interface():
     print("LED API not found installing")
     os.system("sudo apt update && sudo apt install -y git")
-    os.system("cd ~/ && git clone " + led_api_git_url)
-    os.system("cd " + repo_dir + " &&  make -C examples-api-use")
-    os.system("cd " + repo_dir + "/examples-api-use && cp -rf ./" + print_bin + " /usr/local/bin")
+    os.system("cd {0} && sudo git clone {1}".format(install_dir, led_api_git_url))
+    os.system("cd {0} && sudo chown -R $USER:$USER .".format(repo_dir))
+    os.system("cd {0} && make -C examples-api-use".format(repo_dir))
+    os.system("cd {0}/examples-api-use && sudo cp -rf {1} /usr/local/bin".format(repo_dir, print_bin))
+
+
+def bash_run(command):
+    result = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True, shell=True)
+    stdout = result.stdout.replace('\n', '')
+    stderr = result.stderr.replace('\n', '')
+    return stdout, stderr
 
 
 def print_is_running():
-    process_count = int(os.system("ps -aux | grep \"" + print_bin + "\" | grep -v grep | awk '{print $2}' | wc -l"))
+    stdout,_ = bash_run("ps -aux | grep \"" + print_bin + "\" | grep -v grep | awk '{print $2}' | wc -l")
+    process_count = int(stdout)
     return process_count > 0
 
 
@@ -68,15 +84,9 @@ async def print_status(args='', x=0, y=0, color=None):
         color = random_color()
     print_bin_options = "-f {0} -s {1} -l {2} -C {3} -x {4} -y {5}".format(default_font, scroll_speed, 1,
                                                                            color, x, y)
-    os.system(print_bin + " " + print_bin_options + " " + led_default_options + " " + args)
-    while True:
+    os.system("sudo " + print_bin + " " + print_bin_options + " " + led_default_options + " " + args)
+    while print_is_running():
         await asyncio.sleep(1)
-        print("print_is_running()", print_is_running())
-        if not print_is_running():
-            print("print_is_running()", print_is_running())
-            await asyncio.sleep(8)
-            exit_scroll()
-            break
 
 
 async def pihole_api(hostname=default_hostname, port=default_port, http_scheme=default_scheme):
@@ -101,9 +111,9 @@ def systemd_status_remote_alert(hostname=default_hostname, usrname=default_user,
     ssh.load_system_host_keys()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     if is_passwd:
-        ssh.connect(hostname, username=usrname, password=passwd_or_private_key)
+        ssh.connect(hostname=hostname, username=usrname, password=passwd_or_private_key)
     else:
-        k = paramiko.RSAKey.from_private_key_file(passwd_or_private_key)
+        k = paramiko.RSAKey.from_private_key_file(get_shell_path(passwd_or_private_key))
         ssh.connect(hostname=hostname, username=usrname, pkey=k)
 
     cmd_to_execute = 'systemctl is-failed ' + service
@@ -116,7 +126,7 @@ def systemd_status_remote_alert(hostname=default_hostname, usrname=default_user,
 
 
 def is_led_interface_installed():
-    return os.path.isdir(repo_dir)
+    return os.path.isdir(repo_dir + '/')
 
 
 async def main():
@@ -135,8 +145,18 @@ async def main():
     ]
     hosts = yaml_file['hosts']
 
-    async def run_api(hostname):
-        await pihole_api(hostname, default_port, default_scheme)
+    async def run_api(host_data, hostname):
+        if "http_port" in host_data:
+            http_port = host_data['http_port']
+        else:
+            http_port = default_port
+
+        if "http_scheme" in host_data:
+            http_scheme = host_data['http_scheme']
+        else:
+            http_scheme = default_scheme
+
+        await pihole_api(hostname, http_port, http_scheme)
         time.sleep(1.0)
 
     def run_alert(host_data, hostname):
@@ -155,8 +175,9 @@ async def main():
                 is_password = False
 
             for service in services:
-                alert_result = systemd_status_remote_alert(host_data_hostname, host_data_username,
-                                                           host_data_password_or_private_key, service, is_password)
+                alert_result = systemd_status_remote_alert(hostname=host_data_hostname, usrname=host_data_username,
+                                                           passwd_or_private_key=host_data_password_or_private_key,
+                                                           service=service, is_passwd=is_password)
                 if alert_result is not None:
                     exit_scroll()
                     await asyncio.sleep(2)
@@ -168,11 +189,14 @@ async def main():
         for host in hosts:
             current_host = host[list(host)[0]]
             current_hostname = current_host['hostname']
+            try:
+                t2 = threading.Thread(target=run_alert, args=(current_host,current_hostname,))
+                t2.start()
+            except:
+                print("Thread error")
 
-            t2 = threading.Thread(target=run_alert, args=(current_host,current_hostname,))
-            t2.start()
-            await run_api(current_hostname)
-
+            await pihole_api(current_hostname, 8443, 'https')
+            await run_api(current_host, current_hostname)
 
 if not is_led_interface_installed():
     install_led_interface()
