@@ -8,7 +8,7 @@ import random
 import asyncio
 import threading
 from subprocess import PIPE, run
-
+import re
 repo = 'rpi-rgb-led-matrix'
 install_dir = '/opt/'
 repo_dir = install_dir + repo
@@ -78,14 +78,24 @@ def print_is_running():
     return process_count > 0
 
 
+async def queue_print_run(sleep_time=1, timeout=16):
+    timeout_counter = 0
+    while print_is_running():
+        await asyncio.sleep(sleep_time)
+        timeout_counter += 1
+        if timeout_counter >= timeout:
+            print("Error process timed out")
+            break
+
+
 async def print_status(args='', x=0, y=0, color=None):
     if color is None:
         color = random_color()
+    await queue_print_run()
     print_bin_options = "-f {0} -s {1} -l {2} -C {3} -x {4} -y {5}".format(default_font, scroll_speed, 1,
                                                                            color, x, y)
     os.system("sudo " + print_bin + " " + print_bin_options + " " + led_default_options + " " + args)
-    while print_is_running():
-        await asyncio.sleep(1)
+    await queue_print_run()
 
 
 async def pihole_api(hostname=default_hostname, port=default_port, http_scheme=default_scheme):
@@ -118,8 +128,12 @@ def systemd_status_remote_alert(hostname=default_hostname, usrname=default_user,
 
     cmd_to_execute = 'systemctl is-failed ' + service
     ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(cmd_to_execute)
-    failed_str = 'inactive'
-    if failed_str in ssh_stdout:
+    std_out_str = ssh_stdout.read().decode()
+    print("ssh_stdout", std_out_str)
+    failed_regex_tr = '(inactive|(de|)activating|failed)'
+    # activating
+   # if failed_str in :
+    if re.match(failed_regex_tr,std_out_str):
         return "Alert: Systemd Service has failed {0} on host {1}".format(service, hostname)
     else:
         return None
@@ -159,8 +173,8 @@ async def main():
         await pihole_api(hostname, http_port, http_scheme)
         time.sleep(1.0)
 
-    def run_alert(host_data, hostname):
-        async def run():
+    async def run_alert(host_data, hostname):
+        # async def run():
             host_data_username = current_host['username']
             try:
                 host_data_hostname = host_data['override_hostname']
@@ -178,12 +192,21 @@ async def main():
                 alert_result = systemd_status_remote_alert(hostname=host_data_hostname, usrname=host_data_username,
                                                            passwd_or_private_key=host_data_password_or_private_key,
                                                            service=service, is_passwd=is_password)
+                print("alert_result, service, host_data_hostname ", alert_result, service, host_data_hostname)
                 if alert_result is not None:
                     exit_scroll()
-                    await asyncio.sleep(2)
-                    await print_status(alert_result)
+                    await asyncio.sleep(4)
+                    exit_scroll()
+                    await asyncio.sleep(1)
+                    exit_scroll()
+                    alert_warning_str = "!---! ALERT ALERT ALERT !---!"
+                    alert_color = '255,0,0'
+                    await print_status(alert_warning_str,0,0, color=alert_color)
+                    await print_status(alert_warning_str,0,20, color=alert_color)
+                    await print_status(alert_warning_str,0, 40, color=alert_color)
+                    await print_status(alert_result,0,0, color=alert_color)
 
-        asyncio.run(run())
+        # asyncio.run(run())
 
     while True:
         for host in hosts:
@@ -195,7 +218,11 @@ async def main():
             except:
                 print("Thread error")
             try:
+                await run_alert(current_host, current_hostname)
                 await run_api(current_host, current_hostname)
+                # await asyncio.gather(run_api(current_host, current_hostname),run_alert(current_host, current_hostname) )
+                # t1 = threading.Thread(target=run_api, args=(current_host, current_hostname,))
+                # t1.start()
             except:
                 print("")
 
