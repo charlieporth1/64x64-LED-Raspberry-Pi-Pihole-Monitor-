@@ -194,8 +194,10 @@ async def main():
                 t2.start()
             except:
                 print("Thread error")
-
-            await run_api(current_host, current_hostname)
+            try:
+                await run_api(current_host, current_hostname)
+            except:
+                print("")
 
 
 if not is_led_interface_installed():
