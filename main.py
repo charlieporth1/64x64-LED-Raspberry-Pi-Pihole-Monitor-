@@ -212,11 +212,11 @@ async def main():
         for host in hosts:
             current_host = host[list(host)[0]]
             current_hostname = current_host['hostname']
-            try:
-                t2 = threading.Thread(target=run_alert, args=(current_host, current_hostname,))
-                t2.start()
-            except:
-                print("Thread error")
+        #    try:
+        #        t2 = threading.Thread(target=run_alert, args=(current_host, current_hostname,))
+        #        t2.start()
+        #    except:
+        #        print("Thread error")
             try:
                 await run_alert(current_host, current_hostname)
                 await run_api(current_host, current_hostname)
