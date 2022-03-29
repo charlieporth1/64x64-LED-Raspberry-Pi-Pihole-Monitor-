@@ -18,7 +18,7 @@ MarkupPy==1.14
 msgpack==1.0.2
 openpyxl==3.0.7
 packaging==20.9
-paramiko==2.7.2
+paramiko==2.10.1
 pluggy==0.13.1
 psycopg2-binary==2.8.6
 py==1.10.0
